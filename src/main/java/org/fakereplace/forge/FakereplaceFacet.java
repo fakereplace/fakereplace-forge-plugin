@@ -22,7 +22,7 @@
 
 package org.fakereplace.forge;
 
-import java.util.Arrays;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -42,14 +42,14 @@ import org.jboss.forge.shell.plugins.RequiresFacet;
  * @author Stuart Douglas
  */
 @Alias("org.fakereplace")
-@RequiresFacet({DependencyFacet.class})
+@RequiresFacet({DependencyFacet.class, MavenPluginFacet.class})
 public class FakereplaceFacet extends BaseFacet {
 
     public static final String FAKEREPLACE_VERSION_PROP_NAME = "version.fakereplace";
     public static final String FAKEREPLACE_VERSION_PROP = "${" + FAKEREPLACE_VERSION_PROP_NAME + "}";
 
     @Inject
-    private ShellPrompt prompt;
+    private ShellPrompt shell;
 
     @Inject
     private ShellPrintWriter writer;
@@ -57,17 +57,18 @@ public class FakereplaceFacet extends BaseFacet {
     @Override
     public boolean install() {
         writer.println();
-        FakereplaceVersion version = prompt.promptChoiceTyped("Which version of Fakereplace?",
-                Arrays.asList(FakereplaceVersion.values()), FakereplaceVersion.FAKEREPLACE_1_0_0_Alpha1);
-
-        final MavenPluginFacet plugins = project.getFacet(MavenPluginFacet.class);
-        final Dependency fakereplace = DependencyBuilder.create(version.getGa() + ":" + FAKEREPLACE_VERSION_PROP);
-        final MavenPlugin plugin = MavenPluginBuilder.create().setDependency(fakereplace);
-        plugins.addPlugin(plugin);
-
         final DependencyFacet dependencyFacet = project.getFacet(DependencyFacet.class);
-        dependencyFacet.getProperties().put(FAKEREPLACE_VERSION_PROP, version.getVersion());
+        final MavenPluginFacet plugins = project.getFacet(MavenPluginFacet.class);
+        DependencyBuilder dependency = createFakereplaceDependency();
+        if (!plugins.hasPlugin(dependency)) {
+            final List<Dependency> dependencies = dependencyFacet.resolveAvailableVersions(dependency);
+            final Dependency fakereplace = shell.promptChoiceTyped("Which version of Fakereplace do you want to install?", dependencies, DependencyUtil.getLatestNonSnapshotVersion(dependencies));
+            dependencyFacet.setProperty(FAKEREPLACE_VERSION_PROP_NAME, fakereplace.getVersion());
 
+            dependency.setVersion(FAKEREPLACE_VERSION_PROP);
+            final MavenPlugin plugin = MavenPluginBuilder.create().setDependency(dependency);
+            plugins.addPlugin(plugin);
+        }
         return true;
     }
 
@@ -75,14 +76,16 @@ public class FakereplaceFacet extends BaseFacet {
     public boolean isInstalled() {
         if (getProject().hasFacet(MavenPluginFacet.class)) {
             final MavenPluginFacet plugins = project.getFacet(MavenPluginFacet.class);
-            for (final FakereplaceVersion version : FakereplaceVersion.values()) {
-                final Dependency fakereplace = DependencyBuilder.create(version.getGa() + ":" + FAKEREPLACE_VERSION_PROP);
-                if (plugins.hasPlugin(fakereplace)) {
-                    return true;
-                }
+            final DependencyBuilder fakereplace = createFakereplaceDependency();
+            if (plugins.hasPlugin(fakereplace)) {
+                return true;
             }
         }
         return false;
     }
-
+    private DependencyBuilder createFakereplaceDependency() {
+        return DependencyBuilder.create()
+                .setGroupId("org.fakereplace")
+                .setArtifactId("fakereplace-maven-plugin");
+    }
 }

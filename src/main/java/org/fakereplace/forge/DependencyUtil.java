@@ -22,26 +22,31 @@
 
 package org.fakereplace.forge;
 
+import java.util.List;
+
+import org.jboss.forge.project.dependencies.Dependency;
+
 /**
- * @author Stuart Douglas
+ * DependencyUtil
+ *
+ * @author <a href="mailto:aslak@redhat.com">Aslak Knutsen</a>
+ * @version $Revision: $
  */
-public enum FakereplaceVersion {
-
-    FAKEREPLACE_1_0_0_Alpha1("org.fakereplace:fakereplace-plugin", "1.0.0.Alpha1");
-
-    private final String ga;
-    private final String version;
-
-    private FakereplaceVersion(final String ga, final String version) {
-        this.ga = ga;
-        this.version = version;
+public class DependencyUtil {
+    private DependencyUtil() {
     }
 
-    public String getGa() {
-        return ga;
+    public static Dependency getLatestNonSnapshotVersion(List<Dependency> dependencies) {
+        if (dependencies == null) {
+            return null;
+        }
+        for (int i = dependencies.size() - 1; i >= 0; i--) {
+            Dependency dep = dependencies.get(i);
+            if (!dep.getVersion().endsWith("SNAPSHOT")) {
+                return dep;
+            }
+        }
+        return dependencies.get(dependencies.size() - 1);
     }
 
-    public String getVersion() {
-        return version;
-    }
 }

@@ -25,6 +25,7 @@ package org.fakereplace.forge;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
 
+import org.jboss.forge.maven.MavenCoreFacet;
 import org.jboss.forge.project.Project;
 import org.jboss.forge.project.facets.JavaSourceFacet;
 import org.jboss.forge.project.facets.events.InstallFacets;
@@ -44,7 +45,7 @@ import org.jboss.forge.shell.plugins.RequiresProject;
  * @author Stuart Douglas
  */
 @Alias("fakereplace")
-@RequiresFacet(JavaSourceFacet.class)
+@RequiresFacet({JavaSourceFacet.class, MavenCoreFacet.class})
 @RequiresProject
 @Help("A plugin that helps setting up Fakereplace")
 public class FakereplacePlugin implements Plugin {
@@ -77,6 +78,12 @@ public class FakereplacePlugin implements Plugin {
         }
     }
 
+    @Command("run")
+    public void run() {
+        final MavenCoreFacet maven = project.getFacet(MavenCoreFacet.class);
+        maven.executeMaven(new String[] {"package", "fakereplace:fakereplace"});
+    }
+
     private void assertInstalled() {
         if (!project.hasFacet(FakereplaceFacet.class)) {
             throw new RuntimeException("FakereplaceFacet is not installed. Use 'fakereplace setup' to get started.");
@@ -85,6 +92,7 @@ public class FakereplacePlugin implements Plugin {
 
     @Command("help")
     public void exampleDefaultCommand(@Option final String opt, final PipeOut pipeOut) {
-        pipeOut.println(ShellColor.BLUE, "Once this facet is installed Fakereplace will run automatically");
+        pipeOut.println(ShellColor.BLUE, "Once this facet is installed use 'fakereplace run' to build your project and run a hot replacement. " +
+                "This command simply executes 'mvn package fakereplace:fakereplace'");
     }
 }
